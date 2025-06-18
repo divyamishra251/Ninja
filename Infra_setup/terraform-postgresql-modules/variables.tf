@@ -13,7 +13,7 @@ variable "vpc_cidr" {
 variable "key_name" {
   description = "Key pair name for SSH access"
   type        = string
-  default     = "US.pem"
+  default     = "US"
 }
 
 variable "my_ip" {
