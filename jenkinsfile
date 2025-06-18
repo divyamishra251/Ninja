@@ -1,61 +1,57 @@
+// Expose parameter for Multibranch or Pipeline
+properties([
+  parameters([
+    choice(
+      name: 'action',
+      choices: ['apply', 'destroy'],
+      description: 'Select the action to perform'
+    )
+  ])
+])
+
 pipeline {
-    parameters {
-        choice(name: 'action', choices: ['apply', 'destroy'], description: 'Select the action to perform')
-    }
-
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-        AWS_DEFAULT_REGION    = 'us-east-1'
-    }
-
     agent any
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Checkout Repository') {
             steps {
                 git url: 'https://github.com/divyamishra251/Ninja.git', branch: 'main'
             }
         }
 
-        stage('Terraform Init & Validate') {
+        stage('Terraform & Ansible') {
             steps {
-                sh '''
-                    terraform -chdir=terraform init
-                    terraform -chdir=terraform validate
-                    terraform -chdir=terraform plan
-                '''
-            }
-        }
+                // Inject AWS credentials
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    script {
+                        // Terraform operations
+                        dir('terraform') {
+                            sh '''
+                                terraform init
+                                terraform validate
+                                terraform plan
+                                terraform ${params.action} --auto-approve
+                            '''
+                        }
 
-        stage('Terraform Apply/Destroy') {
-            steps {
-                sh 'cd terraform && terraform ${action} --auto-approve'
-            }
-        }
+                        // Wait and run Ansible if action is apply
+                        if (params.action == 'apply') {
+                            echo 'Waiting 30s for EC2 instances to be ready...'
+                            sleep time: 30, unit: 'SECONDS'
 
-        stage('Sleep After Apply') {
-            when {
-                expression { return params.action == 'apply' }
-            }
-            steps {
-                echo "Sleeping for 15 seconds to allow EC2 boot and tags sync..."
-                sleep 15
-            }
-        }
-
-        stage('Approve & Run Ansible Playbook') {
-            when {
-                expression { return params.action == 'apply' }
-            }
-            steps {
-                input message: 'Do you approve running the Ansible playbook?', ok: 'Yes'
-                echo "Running Ansible playbook using dynamic inventory..."
-                sh '''
-                    cd ansiblerole
-                    ansible-playbook -i aws_ec2_postgres.aws_ec2.yaml playbook.yml
-                '''
+                            dir('ansiblerole') {
+                                sh '''
+                                    ansible-inventory -i aws_ec2_postgres.aws_ec2.yaml --graph
+                                    ansible-playbook -i aws_ec2_postgres.aws_ec2.yaml playbook.yml
+                                '''
+                            }
+                        }
+                    }
+                }
             }
         }
     }
