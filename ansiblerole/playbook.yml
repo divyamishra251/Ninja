@@ -1,0 +1,6 @@
+---
+- name: Installing PostgreSQL on my EC2s
+  hosts: tag_Role_postgresql_role
+  become: true
+  roles:
+    - postgresql_role

@@ -1,0 +1,19 @@
+[defaults]
+inventory = ./aws_ec2_postgres.aws_ec2.yaml
+remote_user = ubuntu
+private_key_file = /home/divya/Downloads/US.pem
+host_key_checking = False
+retry_files_enabled = False
+timeout = 60
+interpreter_python = auto_silent
+deprecation_warnings = False
+forks = 10
+log_path = ./ansible.log
+
+[inventory]
+enable_plugins = aws_ec2
+
+[ssh_connection]
+ssh_args = -o ProxyCommand="ssh -i /home/Downloads/US.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@{{ bastion_ip }}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+pipelining = True
+control_path = ~/.ansible/cp/ansible-ssh-%%h-%%p-%%r

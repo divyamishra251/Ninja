@@ -1,0 +1,24 @@
+---
+# vars file for postgresql_role
+
+# Define specific packages based on the OS type
+postgresql_packages: "{{ ubuntu_packages if ansible_facts['os_family'] == 'Debian' else centos_packages }}"
+
+# Package list per OS
+ubuntu_packages:
+  - postgresql
+  - postgresql-contrib
+
+centos_packages:
+  - postgresql-server
+  - postgresql-contrib
+
+# Dynamic list of primary PostgreSQL node IPs (from group with Role=postgresql)
+postgresql_primary_nodes: >-
+  {{ groups['tag_postgresql'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | list }}
+
+# PostgreSQL configuration options
+postgresql_version: "14"
+postgresql_data_directory: "/var/lib/postgresql/{{ postgresql_version }}/main"
+postgresql_listen_addresses: "*"
+postgresql_port: 5432

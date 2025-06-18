@@ -1,0 +1,12 @@
+# PostgreSQL Client Authentication Configuration File
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow local connections
+local   all             all                                     peer
+
+# Allow connections from any IP (remote access via Bastion)
+host    all             all             0.0.0.0/0               md5
+
+# host    all             all             {{ bastion_private_ip }}/32      md5
+
