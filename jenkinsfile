@@ -20,7 +20,18 @@ pipeline {
             }
         }
 
-        stage('Terraform & Ansible') {
+        stage('Terraform & Ansible') {divya@ideapad2510:~/one_click_infra$ ls
+ansiblerole  Infra_setup  jenkinsfile
+divya@ideapad2510:~/one_click_infra$ cd Infra_setup/
+divya@ideapad2510:~/one_click_infra/Infra_setup$ sl
+Command 'sl' not found, but can be installed with:
+sudo apt install sl
+divya@ideapad2510:~/one_click_infra/Infra_setup$ ls
+terraform-postgresql-modules
+divya@ideapad2510:~/one_click_infra/Infra_setup$ cd terraform-postgresql-modules/
+divya@ideapad2510:~/one_click_infra/Infra_setup/terraform-postgresql-modules$ ls
+main.tf  modules  outputs.tf  variables.tf
+divya@ideapad2510:~/one_click_infra/Infra_setup/terraform-postgresql-modules$ 
             steps {
                 // Inject AWS credentials
                 withCredentials([
@@ -29,7 +40,7 @@ pipeline {
                 ]) {
                     script {
                         // Terraform operations
-                        dir('terraform') {
+                        dir('Infra_setup/terraform-postgresql-modules') {
                             sh '''
                                 terraform init
                                 terraform validate
