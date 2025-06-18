@@ -12,6 +12,10 @@ properties([
 pipeline {
     agent any
 
+    environment {
+        AWS_REGION = 'us-east-1' // pass it explicitly if needed
+    }
+
     stages {
 
         stage('Checkout Repository') {
@@ -22,32 +26,35 @@ pipeline {
 
         stage('Terraform & Ansible') {
             steps {
-                // Inject AWS credentials
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     script {
-                        // Terraform operations
-                        dir('Infra_setup/terraform-postgresql-modules') {
-                            sh '''
-                                terraform init
-                                terraform validate
-                                terraform plan
-                                terraform ${params.action} --auto-approve
-                            '''
-                        }
-
-                        // Wait and run Ansible if action is apply
-                        if (params.action == 'apply') {
-                            echo 'Waiting 30s for EC2 instances to be ready...'
-                            sleep time: 30, unit: 'SECONDS'
-
-                            dir('ansiblerole') {
+                        withEnv([
+                            "AWS_ACCESS_KEY_ID=${env.AWS_ACCESS_KEY_ID}",
+                            "AWS_SECRET_ACCESS_KEY=${env.AWS_SECRET_ACCESS_KEY}",
+                            "AWS_REGION=${env.AWS_REGION}"
+                        ]) {
+                            dir('Infra_setup/terraform-postgresql-modules') {
                                 sh '''
-                                    ansible-inventory -i aws_ec2_postgres.aws_ec2.yaml --graph
-                                    ansible-playbook -i aws_ec2_postgres.aws_ec2.yaml playbook.yml
+                                    terraform init
+                                    terraform validate
+                                    terraform plan
+                                    terraform ${action} --auto-approve
                                 '''
+                            }
+
+                            if (params.action == 'apply') {
+                                echo 'Waiting 30s for EC2 instances to be ready...'
+                                sleep time: 30, unit: 'SECONDS'
+
+                                dir('ansiblerole') {
+                                    sh '''
+                                        ansible-inventory -i aws_ec2_postgres.aws_ec2.yaml --graph
+                                        ansible-playbook -i aws_ec2_postgres.aws_ec2.yaml playbook.yml
+                                    '''
+                                }
                             }
                         }
                     }
